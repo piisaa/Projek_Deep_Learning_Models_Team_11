@@ -44,7 +44,9 @@ def evaluate_model(model, test_ds, class_names):
     )
 
     cm = confusion_matrix(
-        y_true, y_pred
+    y_true,
+    y_pred,
+    labels=np.arange(len(class_names))
     )
 
     # Menampilkan hasil
