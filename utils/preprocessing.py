@@ -4,10 +4,7 @@ import tensorflow as tf
 from pathlib import Path
 from sklearn.model_selection import train_test_split, StratifiedKFold
 
-
-# ==========================================
 # 1. PENGATURAN DASAR
-# ==========================================
 
 # preprocessing.py berada di Flower-Classification/CNN/Utils/
 # Jadi dataset berada dua tingkat di atas folder Utils.
@@ -21,9 +18,7 @@ N_SPLITS = 5
 TEST_SIZE = 0.15
 
 
-# ==========================================
 # 2. MEMBACA NAMA KELAS, GAMBAR, DAN LABEL
-# ==========================================
 
 def get_image_data():
     """Membaca path gambar dan label dari setiap folder kelas."""
@@ -80,9 +75,8 @@ def get_image_data():
     return image_paths, labels, class_names
 
 
-# ==========================================
 # 3. LOAD IMAGE, RESIZE, DAN NORMALIZATION
-# ==========================================
+
 
 def load_image(path, label):
     image = tf.io.read_file(path)
@@ -107,9 +101,9 @@ def load_image(path, label):
     return image, label
 
 
-# ==========================================
+
 # 4. DATA AUGMENTATION
-# ==========================================
+
 
 def create_augmentation():
     return tf.keras.Sequential(
@@ -126,9 +120,9 @@ def create_augmentation():
 augmentation = create_augmentation()
 
 
-# ==========================================
+
 # 5. MEMBUAT PIPELINE DATASET
-# ==========================================
+
 
 def create_dataset(paths, labels, training=False):
     dataset = tf.data.Dataset.from_tensor_slices((paths, labels))
@@ -159,9 +153,8 @@ def create_dataset(paths, labels, training=False):
     return dataset
 
 
-# ==========================================
+
 # 6. MEMBAGI DATA: FINAL TEST + 5-FOLD CV
-# ==========================================
 
 def prepare_datasets():
     image_paths, labels, class_names = get_image_data()
@@ -245,9 +238,7 @@ def prepare_datasets():
     }
 
 
-# ==========================================
 # 7. CEK HASIL PREPROCESSING
-# ==========================================
 
 def check_preprocessing(data):
     print("\nPreprocessing selesai!")
@@ -273,9 +264,9 @@ def check_preprocessing(data):
     print("\nSEMUA PIPELINE BERHASIL DIBUAT!")
 
 
-# ==========================================
+
 # 8. MENJALANKAN PREPROCESSING
-# ==========================================
+
 
 if __name__ == "__main__":
     prepared_data = prepare_datasets()
