@@ -8,7 +8,9 @@ from sklearn.model_selection import train_test_split, StratifiedKFold
 
 # preprocessing.py berada di Flower-Classification/CNN/Utils/
 # Jadi dataset berada dua tingkat di atas folder Utils.
-PROJECT_DIR = Path(__file__).resolve().parents[2]
+from pathlib import Path
+
+PROJECT_DIR = Path.cwd()
 DATA_DIR = PROJECT_DIR / "dataset"
 
 IMG_SIZE = (224, 224)
@@ -16,7 +18,6 @@ BATCH_SIZE = 32
 SEED = 42
 N_SPLITS = 5
 TEST_SIZE = 0.15
-
 
 # 2. MEMBACA NAMA KELAS, GAMBAR, DAN LABEL
 
