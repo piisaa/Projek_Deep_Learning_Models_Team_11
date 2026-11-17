@@ -1,16 +1,18 @@
+
 import numpy as np
-import tensorflow as tf
+import torch
 
 from pathlib import Path
+from PIL import Image
+from torch.utils.data import Dataset, DataLoader
+from torchvision import transforms
 from sklearn.model_selection import train_test_split, StratifiedKFold
+
 
 # 1. PENGATURAN DASAR
 
 # preprocessing.py berada di Flower-Classification/CNN/Utils/
-# Jadi dataset berada dua tingkat di atas folder Utils.
-from pathlib import Path
-
-PROJECT_DIR = Path.cwd()
+PROJECT_DIR = Path(__file__).resolve().parents[1]
 DATA_DIR = PROJECT_DIR / "dataset"
 
 IMG_SIZE = (224, 224)
@@ -18,6 +20,7 @@ BATCH_SIZE = 32
 SEED = 42
 N_SPLITS = 5
 TEST_SIZE = 0.15
+
 
 # 2. MEMBACA NAMA KELAS, GAMBAR, DAN LABEL
 
@@ -78,90 +81,99 @@ def get_image_data():
 
 # 3. LOAD IMAGE, RESIZE, DAN NORMALIZATION
 
+def load_image(path):
+    image = Image.open(path).convert("RGB")
 
-def load_image(path, label):
-    image = tf.io.read_file(path)
-
-    image = tf.io.decode_image(
-        image,
-        channels=3,
-        expand_animations=False
+    image = image.resize(
+        (IMG_SIZE[1], IMG_SIZE[0])
     )
 
-    image.set_shape([None, None, 3])
+    image = transforms.ToTensor()(image)
 
-    # Resize gambar
-    image = tf.image.resize(image, IMG_SIZE)
-
-    # Mengubah tipe data menjadi float32
-    image = tf.cast(image, tf.float32)
-
-    # Normalisasi pixel 0-255 menjadi 0-1
-    image = image / 255.0
-
-    return image, label
-
+    return image
 
 
 # 4. DATA AUGMENTATION
 
-
 def create_augmentation():
-    return tf.keras.Sequential(
-        [
-            tf.keras.layers.RandomFlip("horizontal"),
-            tf.keras.layers.RandomRotation(0.1),
-            tf.keras.layers.RandomZoom(0.1),
-            tf.keras.layers.RandomContrast(0.1)
-        ],
-        name="data_augmentation"
-    )
-
+    return transforms.Compose([
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomRotation(10),
+        transforms.RandomAffine(
+            degrees=0,
+            scale=(0.9, 1.1)
+        ),
+        transforms.ColorJitter(contrast=0.1)
+    ])
 
 augmentation = create_augmentation()
 
-
-
 # 5. MEMBUAT PIPELINE DATASET
+
+class FlowerDataset(Dataset):
+
+    def __init__(self, paths, labels, training=False):
+        self.paths = paths
+        self.labels = labels
+        self.training = training
+
+        self.resize_normalization = transforms.Compose([
+            transforms.Resize(IMG_SIZE),
+            transforms.ToTensor()
+        ])
+
+    def __len__(self):
+        return len(self.paths)
+
+    def __getitem__(self, index):
+
+        image = Image.open(self.paths[index]).convert("RGB")
+
+        image = self.resize_normalization(image)
+
+        if self.training:
+            image = augmentation(image)
+
+        label = torch.tensor(
+            self.labels[index],
+            dtype=torch.long
+        )
+
+        return image, label
 
 
 def create_dataset(paths, labels, training=False):
-    dataset = tf.data.Dataset.from_tensor_slices((paths, labels))
 
-    dataset = dataset.map(
-        load_image,
-        num_parallel_calls=tf.data.AUTOTUNE
+    dataset = FlowerDataset(
+        paths,
+        labels,
+        training=training
     )
 
     if training:
-        dataset = dataset.shuffle(
-            buffer_size=len(paths),
-            seed=SEED
-        )
+        generator = torch.Generator().manual_seed(SEED)
+    else:
+        generator = None
 
-        # Augmentation hanya diterapkan pada data training
-        dataset = dataset.map(
-            lambda image, label: (
-                augmentation(image, training=True),
-                label
-            ),
-            num_parallel_calls=tf.data.AUTOTUNE
-        )
+    loader = DataLoader(
+        dataset,
+        batch_size=BATCH_SIZE,
+        shuffle=training,
+        generator=generator
+    )
 
-    dataset = dataset.batch(BATCH_SIZE)
-    dataset = dataset.prefetch(tf.data.AUTOTUNE)
-
-    return dataset
-
+    return loader
 
 
 # 6. MEMBAGI DATA: FINAL TEST + 5-FOLD CV
 
 def prepare_datasets():
+
     image_paths, labels, class_names = get_image_data()
 
     # Sisihkan 15% data sebagai final test.
     # Sisa 85% digunakan untuk 5-fold cross-validation.
+
     X_trainval, X_test, y_trainval, y_test = train_test_split(
         image_paths,
         labels,
@@ -186,6 +198,7 @@ def prepare_datasets():
         skf.split(X_trainval, y_trainval),
         start=1
     ):
+
         print(f"\n========== FOLD {fold} ==========")
 
         train_paths = X_trainval[train_idx]
@@ -206,7 +219,6 @@ def prepare_datasets():
             training=False
         )
 
-        # Simpan dataset dan indeks agar bisa digunakan oleh train.py.
         fold_datasets.append({
             "fold": fold,
             "train_ds": train_ds,
@@ -221,6 +233,7 @@ def prepare_datasets():
         print("Jumlah validation:", len(val_paths))
 
     # Final test tidak digunakan dalam proses cross-validation.
+
     test_ds = create_dataset(
         X_test,
         y_test,
@@ -242,20 +255,23 @@ def prepare_datasets():
 # 7. CEK HASIL PREPROCESSING
 
 def check_preprocessing(data):
+
     print("\nPreprocessing selesai!")
 
     for fold_data in data["fold_datasets"]:
+
         print(f"\n========== FOLD {fold_data['fold']} ==========")
 
         images, batch_labels = next(iter(fold_data["train_ds"]))
 
         print("Training images:", images.shape)
         print("Training labels:", batch_labels.shape)
+
         print(
             "Rentang pixel:",
-            float(tf.reduce_min(images).numpy()),
+            float(images.min()),
             "-",
-            float(tf.reduce_max(images).numpy())
+            float(images.max())
         )
 
     test_images, test_labels = next(iter(data["test_ds"]))
@@ -265,10 +281,9 @@ def check_preprocessing(data):
     print("\nSEMUA PIPELINE BERHASIL DIBUAT!")
 
 
-
 # 8. MENJALANKAN PREPROCESSING
 
-
 if __name__ == "__main__":
+
     prepared_data = prepare_datasets()
     check_preprocessing(prepared_data)
