@@ -112,3 +112,24 @@ def plot_model_comparison(results_dict, save_path=None):
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
 
     plt.show()
+
+
+if __name__ == "__main__":
+    data = np.load("models/testing_results.npz")
+
+    y_true = data["y_true"]
+    y_pred = data["y_pred"]
+    class_names = data["class_names"].tolist()
+
+    from sklearn.metrics import confusion_matrix
+
+    results = {
+        "confusion_matrix": confusion_matrix(y_true, y_pred)
+    }
+
+    plot_confusion_matrix(
+        results,
+        class_names,
+        model_name="SimpleCNN",
+        save_path="models/confusion_matrix.png"
+    )
