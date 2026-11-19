@@ -7,8 +7,8 @@ import numpy as np
 from pathlib import Path
 from torch.optim import Adam
 
-from Utils.preprocessing import prepare_datasets
-from Model.CNN1 import SimpleCNN
+from utils.preprocessing import prepare_datasets
+from Model.CNN2 import DeepCNN
 
 
 # ==============================
@@ -119,7 +119,7 @@ def main():
 
         print(f"\n========== FOLD {fold} ==========")
 
-        model = SimpleCNN(
+        model = DeepCNN(
             input_dim=224,
             input_c=3,
             output=len(class_names),
@@ -177,7 +177,7 @@ def main():
                     "optimizer_state_dict": optimizer.state_dict(),
                     "loss": best_val_loss,
                     "class_names": class_names
-                }, MODEL_DIR / f"SimpleCNN_fold_{fold}.pt")
+                }, MODEL_DIR / f"DeepCNN_fold_{fold}.pt")
 
         # ==============================
         # SAVE LOSS GRAPH
@@ -224,11 +224,11 @@ def main():
 
     # Load best model
     best_checkpoint = torch.load(
-        MODEL_DIR / f"SimpleCNN_fold_{best_fold['fold']}.pt",
+        MODEL_DIR / f"DeepCNN_fold_{best_fold['fold']}.pt",
         map_location="cpu"
     )
 
-    final_model = SimpleCNN(
+    final_model = DeepCNN(
         input_dim=224,
         input_c=3,
         output=len(class_names),

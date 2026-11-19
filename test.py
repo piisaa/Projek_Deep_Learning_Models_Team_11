@@ -3,8 +3,8 @@ import torch
 import numpy as np
 
 from pathlib import Path
-from Model.CNN1 import SimpleCNN
-from Utils.preprocessing import prepare_datasets
+from Model.CNN2 import DeepCNN
+from utils.preprocessing import prepare_datasets
 
 
 def main():
@@ -21,12 +21,12 @@ def main():
 
     # Memuat checkpoint model terbaik
     checkpoint = torch.load(
-        MODEL_DIR / "SimpleCNN_fold_2.pt",
+        MODEL_DIR / "DeepCNN_fold_2.pt",
         map_location="cpu"
     )
 
     # Membuat arsitektur model
-    model = SimpleCNN(
+    model = DeepCNN(
         input_dim=224,
         input_c=3,
         output=len(class_names),
